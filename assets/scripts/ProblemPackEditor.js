@@ -1,4 +1,17 @@
 export class ProblemPackEditor extends HTMLElement {
+  // 객관식 보기(답변 항목) 개수 제한. 인게임(Unity) 측은 개수 제한이 없으므로 에디터에서만 관리한다.
+  static MIN_CHOICE_OPTIONS = 2;
+  static MAX_CHOICE_OPTIONS = 6;
+  static DEFAULT_CHOICE_OPTIONS = 4;
+
+  static makeDefaultChoiceOptions() {
+    const count = Math.min(
+      Math.max(ProblemPackEditor.DEFAULT_CHOICE_OPTIONS, ProblemPackEditor.MIN_CHOICE_OPTIONS),
+      ProblemPackEditor.MAX_CHOICE_OPTIONS
+    );
+    return Array.from({ length: count }, () => "");
+  }
+
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -162,7 +175,7 @@ export class ProblemPackEditor extends HTMLElement {
     };
 
     if (kind === "choice") {
-      base.choice = { options: ["", "", "", ""], correctIndex: 0 };
+      base.choice = { options: ProblemPackEditor.makeDefaultChoiceOptions(), correctIndex: 0 };
     } else {
       base.shortAnswer = {
         operator: "and",
@@ -238,7 +251,7 @@ export class ProblemPackEditor extends HTMLElement {
 
     typeEl.addEventListener("change", () => {
       if (typeEl.value === "choice") {
-        problem.choice = problem.choice || { options: ["", "", "", ""], correctIndex: 0 };
+        problem.choice = problem.choice || { options: ProblemPackEditor.makeDefaultChoiceOptions(), correctIndex: 0 };
         problem.shortAnswer = null;
       } else {
         problem.shortAnswer = problem.shortAnswer || { operator: "and", conditions: [{ type: "contains", value: "", ignoreCase: true }] };
@@ -416,7 +429,7 @@ export class ProblemPackEditor extends HTMLElement {
         if (radio.checked) problem.choice.correctIndex = i;
       });
       del.addEventListener("click", () => {
-        if (problem.choice.options.length <= 2) return;
+        if (problem.choice.options.length <= ProblemPackEditor.MIN_CHOICE_OPTIONS) return;
         problem.choice.options.splice(i, 1);
         if (problem.choice.correctIndex >= problem.choice.options.length) {
           problem.choice.correctIndex = problem.choice.options.length - 1;
@@ -428,7 +441,7 @@ export class ProblemPackEditor extends HTMLElement {
     });
 
     host.querySelector("[data-act=\"add-opt\"]").addEventListener("click", () => {
-      if (problem.choice.options.length >= 5) return;
+      if (problem.choice.options.length >= ProblemPackEditor.MAX_CHOICE_OPTIONS) return;
       problem.choice.options.push("");
       this.renderProblems();
     });
@@ -710,11 +723,11 @@ export class ProblemPackEditor extends HTMLElement {
 
       if (src?.choice && Array.isArray(src.choice.options)) {
         problem.choice = {
-          options: src.choice.options.map(x => String(x || "")).slice(0, 5),
+          options: src.choice.options.map(x => String(x || "")).slice(0, ProblemPackEditor.MAX_CHOICE_OPTIONS),
           correctIndex: Number.isInteger(src.choice.correctIndex) ? src.choice.correctIndex : 0
         };
-        if (problem.choice.options.length < 2) {
-          while (problem.choice.options.length < 2) problem.choice.options.push("");
+        if (problem.choice.options.length < ProblemPackEditor.MIN_CHOICE_OPTIONS) {
+          while (problem.choice.options.length < ProblemPackEditor.MIN_CHOICE_OPTIONS) problem.choice.options.push("");
         }
       }
 
@@ -733,7 +746,10 @@ export class ProblemPackEditor extends HTMLElement {
       }
 
       if (!problem.choice && !problem.shortAnswer) {
-        problem.choice = { options: ["", ""], correctIndex: 0 };
+        problem.choice = {
+          options: Array.from({ length: ProblemPackEditor.MIN_CHOICE_OPTIONS }, () => ""),
+          correctIndex: 0
+        };
       }
 
       return problem;
@@ -744,7 +760,7 @@ export class ProblemPackEditor extends HTMLElement {
     this.state.problems = problems.length > 0 ? problems : [{
       id: "p1", prompt: "", figureIdentifier: "", figureFileName: "",
       grading: { retryOnWrong: true }, onCorrect: { scoreboard: [] },
-      choice: { options: ["", "", "", ""], correctIndex: 0 }, shortAnswer: null
+      choice: { options: ProblemPackEditor.makeDefaultChoiceOptions(), correctIndex: 0 }, shortAnswer: null
     }];
     this.state.imageStore = imageStore instanceof Map ? imageStore : new Map();
     this.render();
